@@ -54,6 +54,26 @@ def unwrap_google_link(url):
             if len(path_parts) > 1:
                 canonical_path = path_parts[1]
                 return f"{parsed.scheme}://{parsed.netloc}/{canonical_path}"
+                
+        # Case 4: Google News article URLs
+        if 'news.google.com/articles' in url:
+            # Try to extract the actual article URL from the Google News URL
+            try:
+                response = requests.get(url, timeout=5, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                })
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    # Look for the canonical link
+                    canonical = soup.find('link', rel='canonical')
+                    if canonical and canonical.get('href'):
+                        return canonical['href']
+                    # Look for the main article link
+                    article_link = soup.find('a', {'class': 'VDXfz'})
+                    if article_link and article_link.get('href'):
+                        return article_link['href']
+            except:
+                pass
     
     except Exception as e:
         logging.warning(f"Error unwrapping URL {url}: {str(e)}")
@@ -273,92 +293,93 @@ def fetch_microlink_preview(url):
 
 def get_thumbnail_from_url(raw_url):
     """
-    Extract thumbnail URL from Open Graph (og:image) or Twitter card (twitter:image) meta tags
-    Uses TTL cache to avoid re-fetching the same URL repeatedly
+    Get a thumbnail image URL for an article URL
     
     Args:
-        raw_url (str): The URL of the article to fetch the thumbnail from
+        raw_url (str): The article URL to get a thumbnail for
         
     Returns:
-        str: The URL of the thumbnail image, or empty string if not found
+        str: The thumbnail URL, or None if none found
     """
-    # Check cache first
-    if raw_url in thumbnail_cache:
-        return thumbnail_cache[raw_url]
-        
-    # Unwrap Google News and other wrapped URLs first
-    article_url = unwrap_google_link(raw_url)
-    
     try:
-        # Add timeout to avoid hanging on slow responses
-        response = requests.get(article_url, timeout=5, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        })
-        
-        if response.status_code != 200:
-            logging.warning(f"Failed to fetch {article_url} - Status code: {response.status_code}")
-            thumbnail_cache[raw_url] = ""
-            return ""
-        
-        # Parse HTML
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Try to find Open Graph image
-        og_image = soup.find('meta', property='og:image')
-        if og_image and og_image.get('content'):
-            img_url = og_image['content']
-            # Verify it's not a Google placeholder
-            if not looks_like_google_placeholder(img_url):
-                thumbnail_cache[raw_url] = img_url
-                return img_url
-        
-        # Try to find Twitter image as fallback
-        twitter_image = soup.find('meta', attrs={'name': 'twitter:image'})
-        if twitter_image and twitter_image.get('content'):
-            img_url = twitter_image['content']
-            if not looks_like_google_placeholder(img_url):
-                thumbnail_cache[raw_url] = img_url
-                return img_url
-        
-        # Try to find any large image in the article
-        # Look for article image, large image, or hero image
-        img_selectors = [
-            '.article-image img', 
-            '.featured-image img', 
-            '.hero-image img', 
-            'article img.wp-post-image',
-            'img.attachment-large',
-            'img.size-large'
-        ]
-        
-        for selector in img_selectors:
-            images = soup.select(selector)
-            if images and len(images) > 0:
-                for img in images:
-                    src = img.get('src') or img.get('data-src')
-                    if src and (src.startswith('http') or src.startswith('//')):
-                        if src.startswith('//'):
-                            src = 'https:' + src
-                        if not looks_like_google_placeholder(src):
-                            thumbnail_cache[raw_url] = src
-                            return src
-        
-        # If we got here, we haven't found a suitable image with basic methods
-        # Fall back to more advanced extraction (similar to microlink API)
-        logging.info(f"Using advanced image extraction for {article_url}")
-        advanced_img = fetch_microlink_preview(article_url)
-        if advanced_img and not looks_like_google_placeholder(advanced_img):
-            thumbnail_cache[raw_url] = advanced_img
-            return advanced_img
+        # Check cache first
+        if raw_url in thumbnail_cache:
+            return thumbnail_cache[raw_url]
             
-        # No image found - cache empty string to avoid repeated attempts
-        thumbnail_cache[raw_url] = ""
-        return ""
+        # Unwrap Google News URLs
+        url = unwrap_google_link(raw_url)
+        
+        # Get domain for fallback
+        domain = get_domain_from_url(url)
+        
+        # Try to get image from various sources
+        image_url = None
+        
+        # 1. Try to get the publication logo first
+        logo_url = get_favicon_url(domain)
+        if logo_url:
+            # Use Clearbit's logo API with size parameter for better quality
+            image_url = f"{logo_url}?size=200"
+        
+        # 2. If no logo, try Microlink-style extraction
+        if not image_url:
+            image_url = fetch_microlink_preview(url)
+        
+        # 3. If still no image, try Open Graph tags
+        if not image_url or looks_like_google_placeholder(image_url):
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            try:
+                response = requests.get(url, timeout=5, headers=headers)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    
+                    # Try Open Graph image
+                    og_image = soup.find('meta', property='og:image') or soup.find('meta', attrs={'name': 'og:image'})
+                    if og_image and og_image.get('content'):
+                        image_url = og_image.get('content')
+                    
+                    # Try Twitter image
+                    if not image_url or looks_like_google_placeholder(image_url):
+                        twitter_image = soup.find('meta', attrs={'name': 'twitter:image'})
+                        if twitter_image and twitter_image.get('content'):
+                            image_url = twitter_image.get('content')
+                    
+                    # Try article:image
+                    if not image_url or looks_like_google_placeholder(image_url):
+                        article_image = soup.find('meta', attrs={'name': 'article:image'})
+                        if article_image and article_image.get('content'):
+                            image_url = article_image.get('content')
+                    
+                    # Try first large image in article
+                    if not image_url or looks_like_google_placeholder(image_url):
+                        for img in soup.find_all('img'):
+                            src = img.get('src') or img.get('data-src')
+                            if src and not looks_like_google_placeholder(src):
+                                # Check if image is reasonably sized
+                                width = img.get('width')
+                                height = img.get('height')
+                                if width and height and int(width) > 200 and int(height) > 200:
+                                    image_url = src
+                                    break
+            except:
+                pass
+        
+        # 4. If still no image, generate a branded placeholder
+        if not image_url or looks_like_google_placeholder(image_url):
+            placeholder_data = get_branded_placeholder(url)
+            image_url = placeholder_data['image_url']
+        
+        # Cache the result
+        if image_url:
+            thumbnail_cache[raw_url] = image_url
+            
+        return image_url
         
     except Exception as e:
-        logging.warning(f"Error fetching thumbnail from {article_url}: {str(e)}")
-        thumbnail_cache[raw_url] = ""
-        return ""
+        logging.error(f"Error getting thumbnail for {raw_url}: {str(e)}")
+        return None
 
 def get_branded_placeholder(article_url, title=None):
     """
@@ -374,61 +395,26 @@ def get_branded_placeholder(article_url, title=None):
     """
     domain = get_domain_from_url(article_url)
     
-    # Choose color based on domain
-    # We could expand this to use gradients as specified in your JS code
-    color_map = {
-        'a': '#FF5A3C', 'b': '#0EA5E9', 'c': '#34D399', 'd': '#EC4899',
-        'e': '#8B5CF6', 'f': '#FBBF24', 'g': '#6366F1', 'h': '#059669',
-        'i': '#3B82F6', 'j': '#EF4444', 'k': '#14B8A6', 'l': '#F97316',
-        'm': '#84CC16', 'n': '#A855F7', 'o': '#F43F5E', 'p': '#10B981',
-        'q': '#F59E0B', 'r': '#6EE7B7', 's': '#9333EA', 't': '#22D3EE',
-        'u': '#F97316', 'v': '#FCD34D', 'w': '#4F46E5', 'x': '#0284C7',
-        'y': '#7C3AED', 'z': '#C026D3', '0': '#78716C', '1': '#8B5CF6',
-        '2': '#EC4899', '3': '#4ADE80', '4': '#FB923C', '5': '#4F46E5',
-        '6': '#06B6D4', '7': '#0EA5E9', '8': '#0284C7', '9': '#2563EB'
-    }
+    # Get the favicon URL for the domain
+    favicon_url = get_favicon_url(domain)
     
-    # Get the first character of the domain in lowercase
-    first_char = domain.lower()[0] if domain and len(domain) > 0 else 'n'
-    
-    # Get the color from the map, or use a default color if not found
-    primary_color = color_map.get(first_char, '#3d4b66')
-    
-    # For simplicity, use one of four gradient patterns
-    gradients = [
-        f"from-[{primary_color}]/90 to-[#FBBF24]/80",  # warm gradient
-        f"from-[{primary_color}]/90 to-[#6366F1]/80",  # cool gradient
-        f"from-[{primary_color}]/90 to-[#059669]/80",  # green gradient
-        f"from-[{primary_color}]/90 to-[#8B5CF6]/80"   # purple gradient
-    ]
-    
-    # Choose gradient based on domain hash
-    gradient_idx = hash(domain) % len(gradients)
-    gradient = gradients[gradient_idx]
-    
-    # Convert to an SVG data URL
-    from_color = primary_color
-    to_color = gradient.split('to-[')[1].split(']/')[0]
-    
-    # Create SVG with linear gradient
+    # Create SVG with logo in the center
     svg_content = f'''
     <svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">
         <defs>
             <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:{from_color};stop-opacity:0.9" />
-                <stop offset="100%" style="stop-color:{to_color};stop-opacity:0.8" />
+                <stop offset="0%" style="stop-color:#3d4b66;stop-opacity:0.9" />
+                <stop offset="100%" style="stop-color:#2c3e50;stop-opacity:0.8" />
             </linearGradient>
         </defs>
         <rect width="800" height="400" fill="url(#grad)" />
+        <image href="{favicon_url}" x="300" y="150" width="200" height="200" />
     </svg>
     '''
     
     svg_bytes = svg_content.strip().encode('utf-8')
     b64_svg = base64.b64encode(svg_bytes).decode('utf-8')
     image_url = f"data:image/svg+xml;base64,{b64_svg}"
-    
-    # Get the favicon URL for the domain
-    favicon_url = get_favicon_url(domain)
     
     return {
         'image_url': image_url,

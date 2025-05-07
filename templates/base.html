@@ -161,183 +161,170 @@
             box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
         }
         
-        .publisher-color-strip {
-            height: 4px;
-            width: 100%;
-            background-color: #3B82F6;
+        .article-img-container {
             position: relative;
+            width: 100%;
+            height: 200px;
             overflow: hidden;
+            border-radius: var(--card-border-radius) var(--card-border-radius) 0 0;
         }
         
-        .article-card:hover .publisher-color-strip::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
+        .article-img {
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
-            animation: shimmer 2s infinite;
+            object-fit: cover;
+            transition: var(--transition-base);
         }
         
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+        .article-card:hover .article-img {
+            transform: scale(1.05);
         }
         
-        .category-corner-flag {
+        .article-overlay {
             position: absolute;
-            top: 0;
+            bottom: 0;
+            left: 0;
             right: 0;
-            width: 0;
-            height: 0;
-            border-style: solid;
-            border-width: 0 32px 32px 0;
-            border-color: transparent var(--verge-accent) transparent transparent;
-            z-index: 2;
-        }
-        
-        .article-content-container {
-            position: relative;
-            padding: 1.75rem;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .article-monogram {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-8deg);
-            font-size: 12rem;
-            font-weight: 900;
-            opacity: 0.08;
-            color: white;
-            z-index: 0;
-            pointer-events: none;
-            user-select: none;
-            text-shadow: 0 0 25px rgba(255, 255, 255, 0.1);
-            font-family: 'Inter', sans-serif;
-            letter-spacing: -0.05em;
+            padding: 1.5rem;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
         }
         
         .article-title {
-            position: relative;
-            z-index: 1;
+            color: #fff;
+            margin: 0;
             font-family: var(--verge-headline-font);
             font-weight: 700;
-            font-size: 1.35rem;
-            line-height: 1.4;
-            margin-bottom: 1rem;
-        }
-        
-        .article-title h3 {
-            margin-bottom: 0.75rem;
-            font-size: 1.5rem;
-            font-weight: 700;
             line-height: 1.3;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
         }
         
         .article-meta {
             display: flex;
             align-items: center;
             gap: 1rem;
-            margin-top: auto;
-            padding-top: 1rem;
-            border-top: 1px solid var(--verge-border-color);
+            margin-top: 1rem;
             font-size: 0.875rem;
-            color: rgba(255, 255, 255, 0.6);
+            color: rgba(255,255,255,.7);
         }
         
-        .article-source {
+        .source-date {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid var(--verge-border-color);
         }
         
-        .article-date {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+        .badge {
+            font-weight: 500;
+            padding: 0.5em 0.75em;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
         
-        /* Grid layout improvements */
-        .row {
-            margin-left: -1rem;
-            margin-right: -1rem;
+        .keyword-badge {
+            background-color: rgba(255,255,255,.1);
+            color: rgba(255,255,255,.9);
+            border: 1px solid rgba(255,255,255,.1);
         }
         
-        .col, [class*="col-"] {
-            padding-left: 1rem;
-            padding-right: 1rem;
+        .section-heading {
+            font-family: var(--verge-headline-font);
+            font-weight: 800;
+            font-size: 1.5rem;
+            margin: 2rem 0 1.5rem;
+            color: #fff;
+            letter-spacing: -0.02em;
         }
         
-        /* Responsive adjustments */
+        .stat-card {
+            background-color: var(--verge-card-bg);
+            border: 1px solid var(--verge-border-color);
+            border-radius: var(--card-border-radius);
+            padding: 1.5rem;
+            text-align: center;
+            transition: var(--transition-base);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--card-box-shadow);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--verge-accent);
+            margin-bottom: 0.5rem;
+            line-height: 1;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: rgba(255,255,255,.7);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .featured-article {
+            margin-bottom: 3rem;
+        }
+        
+        .featured-article .article-img-container {
+            height: 400px;
+        }
+        
+        .featured-article .article-title {
+            font-size: 2rem;
+            line-height: 1.2;
+        }
+        
         @media (max-width: 768px) {
-            :root {
-                --verge-nav-height: 56px;
+            .featured-article .article-img-container {
+                height: 300px;
             }
             
-            .navbar-verge .nav-link {
-                padding: 0.5rem 1rem;
-                font-size: 0.875rem;
+            .featured-article .article-title {
+                font-size: 1.5rem;
             }
             
-            .article-title h3 {
-                font-size: 1.25rem;
+            .stat-number {
+                font-size: 2rem;
             }
-            
-            .article-content-container {
-                padding: 1.25rem;
-            }
-        }
-        
-        /* Loading states */
-        .loading-skeleton {
-            background: linear-gradient(90deg, 
-                var(--verge-card-bg) 25%, 
-                rgba(255, 255, 255, 0.05) 50%, 
-                var(--verge-card-bg) 75%
-            );
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
-        }
-        
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-verge">
+    <nav class="navbar navbar-expand-lg navbar-verge">
         <div class="container">
-            <a class="navbar-brand" href="/">SOCIAL COMMERCE NEWS</a>
-            <div class="d-flex">
-                <ul class="navbar-nav d-flex flex-row">
+            <a class="navbar-brand" href="/">Social Commerce News</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Home</a>
+                        <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="/">
+                            <i class="bi bi-house-door me-1"></i>Home
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/articles' %}active{% endif %}" href="/articles">Articles</a>
+                        <a class="nav-link {% if request.endpoint == 'articles_list' %}active{% endif %}" href="/articles">
+                            <i class="bi bi-newspaper me-1"></i>Articles
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/trends' %}active{% endif %}" href="/trends">Trends</a>
+                        <a class="nav-link {% if request.endpoint == 'trends_analysis' %}active{% endif %}" href="/trends">
+                            <i class="bi bi-graph-up me-1"></i>Trends
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/keywords' %}active{% endif %}" href="/keywords">Keywords</a>
-                    </li>
-                    <li class="nav-item ms-2">
-                        <span class="nav-link text-light">
-                            <i class="bi bi-clock-history"></i> Updated: {{ now_et.strftime('%b %d, %H:%M') }} ET
-                        </span>
+                        <a class="nav-link {% if request.endpoint == 'manage_keywords' %}active{% endif %}" href="/keywords">
+                            <i class="bi bi-tags me-1"></i>Keywords
+                        </a>
                     </li>
                 </ul>
             </div>

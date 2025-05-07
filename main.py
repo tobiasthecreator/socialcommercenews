@@ -31,17 +31,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:/
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
-    "pool_pre_ping": True,
-    "pool_timeout": 30,
-    "pool_size": 10,
-    "max_overflow": 20,
-    "connect_args": {
-        "connect_timeout": 10,
-        "keepalives": 1,
-        "keepalives_idle": 30,
-        "keepalives_interval": 10,
-        "keepalives_count": 5
-    }
+    "pool_pre_ping": True
 }
 db.init_app(app)
 
@@ -611,323 +601,154 @@ def index():
         keyword_count = Keyword.query.count()
         active_keyword_count = Keyword.query.filter_by(active=True).count()
         article_count = Article.query.count()
-        
-        # Get recent articles
-        recent_articles = Article.query.order_by(desc(Article.published_date)).limit(10).all()
-        
+
+        # Get featured article (most recent)
+        featured_article = Article.query.order_by(desc(Article.published_date)).first()
+        # Get latest articles (excluding featured)
+        latest_articles = Article.query.order_by(desc(Article.published_date)).offset(1).limit(9).all()
+
         # Get all keywords for filtering
         keywords = Keyword.query.order_by(Keyword.display_name).all()
-        
+        active_keywords = [k.display_name for k in keywords if k.active]
+
         # Get current date for footer
         now_utc = datetime.datetime.now()
         now_et = now_utc - timedelta(hours=4)  # Convert to Eastern Time
-        
-        return render_template('index.html', 
-                              keywords=keywords,
-                              keyword_count=keyword_count,
-                              active_keyword_count=active_keyword_count,
-                              article_count=article_count,
-                              recent_articles=recent_articles,
-                              now=now_utc,
-                              now_et=now_et)
+
+        stats = {
+            'total_articles': article_count,
+            'total_keywords': keyword_count,
+            'active_keywords': active_keyword_count
+        }
+
+        return render_template(
+            'index.html',
+            stats=stats,
+            featured_article=featured_article,
+            latest_articles=latest_articles,
+            active_keywords=active_keywords,
+            now=now_utc,
+            now_et=now_et
+        )
 
 @app.route('/trends')
 def trends_analysis():
-    """Display strategic trends analysis dashboard."""
-    # Get time period parameter
-    time_period = request.args.get('time_period', type=int, default=30)
-    
-    # Calculate the date limit
-    date_limit = datetime.datetime.now() - datetime.timedelta(days=time_period)
-    
-    # Base query for articles within time period
-    base_query = Article.query.filter(Article.published_date >= date_limit)
-    
-    # Get article publication dates grouped by day
+    # Get publication data for the last 30 days
+    today = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    thirty_days_ago = today - timedelta(days=29)
+    date_list = [(thirty_days_ago + timedelta(days=i)).date() for i in range(30)]
+
+    # Publication trends (all articles)
     publication_data = db.session.query(
-        func.date(Article.published_date).label('date'),
-        func.count(Article.id).label('count')
-    ).filter(Article.published_date >= date_limit)\
-     .group_by(func.date(Article.published_date))\
-     .order_by(func.date(Article.published_date))\
-     .all()
-    
-    # Prepare data for charts
-    publication_dates = [item.date.strftime('%Y-%m-%d') for item in publication_data]
-    publication_counts = [item.count for item in publication_data]
-    
-    # Get keyword distribution
-    keyword_data = db.session.query(
+        func.date(Article.published_date),
+        func.count(Article.id)
+    ).filter(
+        Article.published_date >= thirty_days_ago
+    ).group_by(
+        func.date(Article.published_date)
+    ).order_by(
+        func.date(Article.published_date)
+    ).all()
+    pub_date_to_count = {d: c for d, c in publication_data}
+    publication_dates = [d.strftime('%Y-%m-%d') for d in date_list]
+    publication_counts = [pub_date_to_count.get(d, 0) for d in date_list]
+
+    # Keyword distribution (top 10, last 30 days)
+    keyword_dist = db.session.query(
         Keyword.display_name,
-        func.count(article_keyword.c.article_id).label('count')
-    ).join(article_keyword, Keyword.id == article_keyword.c.keyword_id)\
-     .join(Article, Article.id == article_keyword.c.article_id)\
-     .filter(Article.published_date >= date_limit)\
-     .group_by(Keyword.display_name)\
-     .order_by(desc('count'))\
-     .limit(10)\
-     .all()
-    
-    keyword_labels = [item.display_name for item in keyword_data]
-    keyword_counts = [item.count for item in keyword_data]
-    
-    # Get source distribution
-    source_data = db.session.query(
+        func.count(Article.id).label('count')
+    ).join(Article.keywords).filter(
+        Article.published_date >= thirty_days_ago
+    ).group_by(Keyword.display_name).order_by(func.count(Article.id).desc()).limit(10).all()
+    keyword_labels = [item[0] for item in keyword_dist]
+    keyword_data = [item[1] for item in keyword_dist]
+
+    # Top keywords with real trend data (last 30 days)
+    top_keywords = []
+    for kw in keyword_labels:
+        # Get daily counts for this keyword
+        daily_counts = db.session.query(
+            func.date(Article.published_date),
+            func.count(Article.id)
+        ).join(Article.keywords).filter(
+            Article.published_date >= thirty_days_ago,
+            Keyword.display_name == kw
+        ).group_by(func.date(Article.published_date)).order_by(func.date(Article.published_date)).all()
+        day_to_count = {d: c for d, c in daily_counts}
+        trend_points = ','.join(str(day_to_count.get(d, 0)) for d in date_list)
+        count = sum(day_to_count.values())
+        top_keywords.append({
+            'name': kw,
+            'count': count,
+            'trend_points': trend_points
+        })
+
+    # Source distribution (last 30 days)
+    source_counts = db.session.query(
         Article.source,
         func.count(Article.id).label('count')
-    ).filter(Article.published_date >= date_limit)\
-     .group_by(Article.source)\
-     .order_by(desc('count'))\
-     .limit(10)\
-     .all()
-    
-    source_labels = [item.source for item in source_data]
-    source_counts = [item.count for item in source_data]
-    
-    # Get trending keywords (with growth calculation)
-    # First get current period data
-    current_period_data = db.session.query(
-        Keyword.id,
-        Keyword.display_name,
-        Keyword.name,
-        func.count(article_keyword.c.article_id).label('count')
-    ).join(article_keyword, Keyword.id == article_keyword.c.keyword_id)\
-     .join(Article, Article.id == article_keyword.c.article_id)\
-     .filter(Article.published_date >= date_limit)\
-     .group_by(Keyword.id, Keyword.display_name, Keyword.name)\
-     .all()
-    
-    # Calculate previous period
-    previous_date_limit = date_limit - datetime.timedelta(days=time_period)
-    
-    # Get previous period data
-    previous_period_data = db.session.query(
-        Keyword.id,
-        func.count(article_keyword.c.article_id).label('count')
-    ).join(article_keyword, Keyword.id == article_keyword.c.keyword_id)\
-     .join(Article, Article.id == article_keyword.c.article_id)\
-     .filter(Article.published_date >= previous_date_limit, Article.published_date < date_limit)\
-     .group_by(Keyword.id)\
-     .all()
-    
-    # Convert to dictionaries for easier lookup
-    current_counts = {item.id: {'keyword': item.display_name, 'name': item.name, 'count': item.count} for item in current_period_data}
-    previous_counts = {item.id: item.count for item in previous_period_data}
-    
-    # Calculate percentage change
-    trending_keywords = []
-    for keyword_id, data in current_counts.items():
-        previous_count = previous_counts.get(keyword_id, 0)
-        if previous_count == 0:
-            # If no previous data, set change to 100% (new keyword)
-            change = 100
-        else:
-            change = round(((data['count'] - previous_count) / previous_count) * 100)
-        
-        # Get the latest articles for this keyword
-        latest_articles = db.session.query(Article)\
-            .join(article_keyword, Article.id == article_keyword.c.article_id)\
-            .filter(article_keyword.c.keyword_id == keyword_id)\
-            .filter(Article.published_date >= date_limit)\
-            .order_by(desc(Article.published_date))\
-            .limit(5)\
-            .all()
-        
-        # Format the articles
-        latest_articles_formatted = []
-        for article in latest_articles:
-            latest_articles_formatted.append({
-                'id': article.id,
-                'title': article.title,
-                'date': article.published_date.strftime('%Y-%m-%d') if article.published_date else 'Unknown',
-                'source': article.source
-            })
-        
-        trending_keywords.append({
-            'keyword': data['keyword'],
-            'name': data['name'],
-            'count': data['count'],
-            'change': change,
-            'articles': latest_articles_formatted
-        })
-    
-    # Sort by change percentage (descending)
-    trending_keywords.sort(key=lambda x: x['change'], reverse=True)
-    trending_keywords = trending_keywords[:6]  # Top 6 trending keywords
-    
-    # Get hot topics (most engaged articles)
-    hot_topics_query = Article.query.filter(Article.published_date >= date_limit)
-    
-    # Get most recent important articles
-    hot_topics = hot_topics_query.order_by(desc(Article.published_date)).limit(6).all()
-    
-    # Format for the template
-    hot_topics_formatted = []
-    for article in hot_topics:
-        hot_topics_formatted.append({
-            'id': article.id,
-            'title': article.title,
-            'summary': article.summary[:150] + "..." if article.summary and len(article.summary) > 150 else article.summary,
-            'url': article.url,
-            'date': article.published_date.strftime('%Y-%m-%d') if article.published_date else 'Unknown',
-            'keywords': [k.display_name for k in article.keywords],
-            'source': article.source
-        })
-    
-    # NEW: Day of Week Analysis - when are most articles published?
-    weekday_data = db.session.query(
-        func.extract('dow', Article.published_date).label('weekday'),
-        func.count(Article.id).label('count')
-    ).filter(Article.published_date >= date_limit)\
-     .group_by('weekday')\
-     .order_by('weekday')\
-     .all()
-    
-    weekday_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    weekday_counts = [0] * 7  # Initialize with zeros
-    
-    for item in weekday_data:
-        weekday_index = int(item.weekday)
-        weekday_counts[weekday_index] = item.count
-    
-    # Content length analysis by source has been removed
-    # Define empty variables to avoid undefined variable errors
-    content_length_labels = []
-    content_length_values = []
-    
-    # NEW: Related topics analysis - find keywords that appear together
-    # This requires a more complex query to find co-occurring keywords
-    related_topics = []
-    
-    # Get all active keywords
-    active_keywords = Keyword.query.filter_by(active=True).all()
-    
-    # Create a matrix of keyword relationships
-    keyword_matrix = {}
-    
-    # For each article, record which keywords appear together
-    recent_articles = Article.query.filter(Article.published_date >= date_limit).all()
-    
-    for article in recent_articles:
-        # Get all keyword IDs for this article
-        keyword_ids = [k.id for k in article.keywords]
-        # For each pair of keywords, increment their co-occurrence count
-        for i, kid1 in enumerate(keyword_ids):
-            if kid1 not in keyword_matrix:
-                keyword_matrix[kid1] = {}
-            for kid2 in keyword_ids[i+1:]:
-                if kid2 not in keyword_matrix[kid1]:
-                    keyword_matrix[kid1][kid2] = 0
-                keyword_matrix[kid1][kid2] += 1
-                
-                # Also update the reverse relationship
-                if kid2 not in keyword_matrix:
-                    keyword_matrix[kid2] = {}
-                if kid1 not in keyword_matrix[kid2]:
-                    keyword_matrix[kid2][kid1] = 0
-                keyword_matrix[kid2][kid1] += 1
-    
-    # Find the strongest relationships
-    strongest_relationships = []
-    keyword_dict = {k.id: k.display_name for k in active_keywords}
-    
-    for kid1, relations in keyword_matrix.items():
-        for kid2, count in relations.items():
-            if kid1 in keyword_dict and kid2 in keyword_dict:
-                strongest_relationships.append({
-                    'keyword1': keyword_dict[kid1],
-                    'keyword2': keyword_dict[kid2],
-                    'count': count
-                })
-    
-    # Sort by count (descending) and take top 10
-    strongest_relationships.sort(key=lambda x: x['count'], reverse=True)
-    related_topics = strongest_relationships[:10]
-    
-    # NEW: Geographic focus - extract location information from article titles
-    # This is a simplified approach - in a real system you might use NLP
-    common_locations = [
-        'US', 'USA', 'United States', 'China', 'UK', 'India', 
-        'Europe', 'Asia', 'Africa', 'Australia', 'Canada', 'Japan',
-        'Brazil', 'Russia', 'Germany', 'France', 'Italy', 'Spain'
+    ).filter(
+        Article.published_date >= thirty_days_ago
+    ).group_by(Article.source).all()
+    total_articles = sum([item[1] for item in source_counts]) or 1
+    source_distribution = [
+        {
+            'name': item[0],
+            'count': item[1],
+            'percentage': round(item[1] / total_articles * 100, 1)
+        }
+        for item in source_counts
     ]
-    
-    location_counts = {}
-    for location in common_locations:
-        count = Article.query.filter(
-            Article.published_date >= date_limit,
-            Article.title.ilike(f'%{location}%')
-        ).count()
-        if count > 0:
-            location_counts[location] = count
-    
-    # Sort by count (descending) and take top 8
-    sorted_locations = sorted(location_counts.items(), key=lambda x: x[1], reverse=True)[:8]
-    geo_labels = [item[0] for item in sorted_locations]
-    geo_counts = [item[1] for item in sorted_locations]
-    
-    # NEW: Weekly article volume trend analysis
-    if time_period >= 28:  # Only show for periods of at least 4 weeks
-        # Group by week
-        weekly_data = []
-        current_date = date_limit
-        while current_date <= datetime.datetime.now():
-            week_end = current_date + datetime.timedelta(days=7)
-            count = Article.query.filter(
-                Article.published_date >= current_date,
-                Article.published_date < week_end
-            ).count()
-            weekly_data.append({
-                'week': current_date.strftime('%Y-%m-%d'),
-                'count': count
-            })
-            current_date = week_end
-        
-        weekly_labels = [item['week'] for item in weekly_data]
-        weekly_counts = [item['count'] for item in weekly_data]
-    else:
-        weekly_labels = []
-        weekly_counts = []
-    
-    # Competitor Analysis has been removed
-    competitor_data = []
-    competitor_groups = {}
-    
-    # Get current date for footer
-    now = datetime.datetime.now()
-    
-    return render_template('trends.html',
-                          time_period=time_period,
-                          publication_dates=publication_dates,
-                          publication_counts=publication_counts,
-                          keyword_labels=keyword_labels,
-                          keyword_counts=keyword_counts,
-                          source_labels=source_labels,
-                          source_counts=source_counts,
-                          trending_keywords=trending_keywords,
-                          weekday_names=weekday_names,
-                          weekday_counts=weekday_counts,
-                          related_topics=related_topics,
-                          geo_labels=geo_labels,
-                          geo_counts=geo_counts,
-                          weekly_labels=weekly_labels,
-                          weekly_counts=weekly_counts,
-                          competitor_data=competitor_data,
-                          competitor_groups=competitor_groups,
-                          now=now,
-                          now_et=now - timedelta(hours=4),
-                          article_count=Article.query.count())
+
+    now_utc = datetime.datetime.now()
+    now_et = now_utc - timedelta(hours=4)
+
+    return render_template(
+        'trends.html',
+        publication_dates=publication_dates,
+        publication_counts=publication_counts,
+        keyword_labels=keyword_labels,
+        keyword_data=keyword_data,
+        top_keywords=top_keywords,
+        source_distribution=source_distribution,
+        now=now_utc,
+        now_et=now_et
+    )
 
 @app.route('/keywords')
 def manage_keywords():
     """Display the keyword management page."""
     keywords = Keyword.query.order_by(Keyword.name).all()
-    
+
+    # Split into active and inactive keywords, and add article_count and last_updated
+    active_keywords = []
+    inactive_keywords = []
+    for k in keywords:
+        article_count = len(k.articles)
+        last_updated = k.updated_at if hasattr(k, 'updated_at') else None
+        keyword_info = {
+            'id': k.id,
+            'name': k.name,
+            'display_name': k.display_name,
+            'article_count': article_count,
+            'last_updated': last_updated
+        }
+        if k.active:
+            active_keywords.append(keyword_info)
+        else:
+            inactive_keywords.append(keyword_info)
+
     # Get current date for footer
     now_utc = datetime.datetime.now()
     now_et = now_utc - timedelta(hours=4)  # Convert to Eastern Time
-    
-    return render_template('keywords.html', keywords=keywords, now=now_utc, now_et=now_et)
+
+    return render_template(
+        'keywords.html',
+        active_keywords=active_keywords,
+        inactive_keywords=inactive_keywords,
+        now=now_utc,
+        now_et=now_et
+    )
 
 @app.route('/keywords/add', methods=['POST'])
 def add_keyword():
@@ -1021,41 +842,60 @@ def articles_list():
     """Display a list of all articles."""
     # Get filter parameters
     keyword_id = request.args.get('keyword_id', type=int)
-    days = request.args.get('days', type=int, default=7)
-    
+    date_range = request.args.get('date_range', '7days')
+    page = request.args.get('page', 1, type=int)
+    per_page = 12
+
     # Base query
     query = Article.query
-    
+
     # Apply filters
     if keyword_id:
         # Filter by keyword
         keyword = Keyword.query.get(keyword_id)
         if keyword:
             query = query.join(Article.keywords).filter(Keyword.id == keyword_id)
-    
-    if days:
-        # Filter by date
-        date_limit = datetime.datetime.now() - datetime.timedelta(days=days)
-        query = query.filter(Article.published_date >= date_limit)
-    
-    # Get the articles
-    articles = query.order_by(desc(Article.published_date)).all()
-    
+
+    # Date range filter
+    now = datetime.datetime.now()
+    if date_range == 'today':
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        query = query.filter(Article.published_date >= start)
+    elif date_range == 'yesterday':
+        start = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        end = start + timedelta(days=1)
+        query = query.filter(Article.published_date >= start, Article.published_date < end)
+    elif date_range == '3days':
+        start = now - timedelta(days=3)
+        query = query.filter(Article.published_date >= start)
+    elif date_range == '7days' or not date_range:
+        start = now - timedelta(days=7)
+        query = query.filter(Article.published_date >= start)
+    elif date_range == 'month':
+        start = now - timedelta(days=30)
+        query = query.filter(Article.published_date >= start)
+    # 'all' means no date filter
+
+    # Get paginated articles
+    pagination = query.order_by(desc(Article.published_date)).paginate(page=page, per_page=per_page, error_out=False)
+    articles = pagination.items
+
     # Get all keywords for the filter dropdown
     keywords = Keyword.query.order_by(Keyword.display_name).all()
-    
+
     # Get current date for footer
     now_utc = datetime.datetime.now()
     now_et = now_utc - timedelta(hours=4)  # Convert to Eastern Time
-    
+
     return render_template('articles.html', 
                           articles=articles, 
                           keywords=keywords,
                           active_keyword_id=keyword_id,
-                          active_days=days,
+                          active_days=7,
                           now=now_utc,
                           now_et=now_et,
-                          article_count=Article.query.count())
+                          article_count=Article.query.count(),
+                          pagination=pagination)
 
 @app.route('/articles/<int:article_id>')
 def article_detail(article_id):
@@ -1200,6 +1040,14 @@ def update_data():
         flash(f'Error checking update status: {str(e)}', 'danger')
         return redirect(url_for('index'))
 
+@app.route('/export_trends')
+def export_trends():
+    format = request.args.get('format', 'csv')
+    if format == 'json':
+        return Response('{"message": "Trends export coming soon!"}', mimetype='application/json')
+    else:
+        return Response('Trends export coming soon!\n', mimetype='text/csv')
+
 def main():
     """Main function to run the social commerce news collection."""
     try:
@@ -1216,7 +1064,7 @@ def main():
 
 if __name__ == "__main__":
     if os.environ.get('FLASK_ENV') == 'development':
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        app.run(host='0.0.0.0', port=5001, debug=True)
     else:
         # Run data collection if executed as a script
         main()

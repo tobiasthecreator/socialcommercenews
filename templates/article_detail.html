@@ -109,115 +109,134 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-lg-8">
-            <!-- Article Header -->
-            <div class="article-header">
+<div class="container">
+    <!-- Article Header -->
+    <div class="card mb-4">
+        <div class="article-img-container" style="height: 400px;">
+            <img src="{{ article.image_url }}" alt="{{ article.title }}" class="article-img">
+            <div class="article-overlay">
                 <h1 class="article-title">{{ article.title }}</h1>
-                <div class="article-metadata">
-                    <span class="article-source">{{ article.source }}</span>
-                    <span class="article-published">{{ article.published_date.strftime('%B %d, %Y') if article.published_date else 'Unknown date' }}</span>
+                <div class="article-meta">
+                    <span class="source">{{ article.source }}</span>
+                    <span class="date">{{ article.published_date.strftime('%B %d, %Y') }}</span>
                 </div>
-                <div class="article-keywords-container">
-                    {% for keyword in article.keywords %}
-                    <a href="{{ url_for('articles_list', keyword_id=keyword.id, days=7) }}" class="badge keyword-badge text-decoration-none">{{ keyword.display_name }}</a>
-                    {% endfor %}
-                </div>
-            </div>
-            
-            <!-- Article Image Banner with Favicon -->
-            <div class="article-image-container mb-4" style="border-radius: 8px; overflow: hidden; max-height: 400px; position: relative;">
-                {% set domain = article.url.split('/')[2]|default('unknown.com') %}
-                {% if 'news.google.com' in article.url %}
-                    {% set domain = (article.source|lower|replace(' ', '') ~ '.com')|default('news.com') %}
-                {% endif %}
-                
-                <!-- Source Favicon in top-left corner -->
-                <div style="position: absolute; top: 15px; left: 15px; z-index: 10; background-color: white; border-radius: 50%; padding: 3px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
-                    <img src="https://logo.clearbit.com/{{ domain }}" 
-                         width="32" height="32" 
-                         onerror="this.onerror=null; this.src='/static/images/default-favicon.png'; this.style.visibility='hidden';"
-                         alt="{{ article.source }} logo" 
-                         style="border-radius: 50%;">
-                </div>
-                
-                {% if article.image_url %}
-                <img src="{{ article.image_url }}" alt="{{ article.title }}" class="w-100 h-100 object-fit-cover" style="transition: transform 0.3s ease;">
-                {% else %}
-                <div class="d-flex align-items-center justify-content-center" style="background-color: #3d4b66; height: 300px; padding: 20px;">
-                    <div class="text-center">
-                        <i class="bi bi-newspaper mb-3" style="font-size: 3rem; color: var(--verge-accent);"></i>
-                        <h2 class="text-white" style="max-width: 80%; margin: 0 auto;">{{ article.title }}</h2>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-            
-            <!-- Article Content -->
-            <div class="article-content">
-                {% if article.content %}
-                    {% for paragraph in article.content.split('\n') %}
-                        {% if paragraph %}
-                        <p>{{ paragraph }}</p>
-                        {% endif %}
-                    {% endfor %}
-                {% else %}
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    No content available for this article. Please check the original source.
-                </div>
-                {% endif %}
             </div>
         </div>
-        
-        <div class="col-lg-4 article-sidebar">
-            <!-- Original Link Card -->
-            <div class="card article-link-card">
+        <div class="source-date">
+            <a href="{{ article.url }}" target="_blank" class="btn btn-verge">
+                <i class="bi bi-box-arrow-up-right me-2"></i>Read Original Article
+            </a>
+            <span class="text-muted">Last updated: {{ article.updated_at.strftime('%B %d, %H:%M') }} ET</span>
+        </div>
+    </div>
+
+    <!-- Article Content -->
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Summary -->
+            {% if article.summary %}
+            <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">Original Article</h5>
-                    <p class="card-text">Visit the original source to read the complete article.</p>
-                    <a href="{{ article.url }}" target="_blank" class="btn btn-verge w-100">
-                        <i class="bi bi-link-45deg me-2"></i>View Original Source
-                    </a>
-                </div>
-            </div>
-            
-            <!-- Related Articles Card -->
-            {% if related_articles %}
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="h5 mb-0">Related Articles</h3>
-                </div>
-                <div class="card-body">
-                    <ul class="related-articles-list">
-                        {% for related in related_articles %}
-                        <li class="related-article-item">
-                            <a href="{{ url_for('article_detail', article_id=related.id) }}" class="related-article-link">
-                                {{ related.title }}
-                            </a>
-                            <div class="related-article-source">
-                                {{ related.source }} - {{ related.published_date.strftime('%b %d, %Y') if related.published_date else 'Unknown date' }}
-                            </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                    <h2 class="h5 mb-3">Summary</h2>
+                    <p class="lead">{{ article.summary }}</p>
                 </div>
             </div>
             {% endif %}
-            
-            <!-- Actions Card -->
-            <div class="card">
+
+            <!-- Keywords -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Related Topics</h2>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for keyword in article.keywords %}
+                        <a href="{{ url_for('articles_list', keyword_id=keyword.id) }}" class="badge keyword-badge text-decoration-none">
+                            {{ keyword.display_name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Articles -->
+            {% if related_articles %}
+            <div class="card mb-4">
                 <div class="card-header">
-                    <h3 class="h5 mb-0">Actions</h3>
+                    <h2 class="h5 mb-0">Related Articles</h2>
                 </div>
                 <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{{ url_for('articles_list') }}" class="btn btn-outline-light">
-                            <i class="bi bi-arrow-left me-2"></i>Back to Articles
+                    <div class="row">
+                        {% for related in related_articles %}
+                        <div class="col-md-6 mb-3">
+                            <div class="article-card">
+                                <div class="article-img-container" style="height: 200px;">
+                                    <img src="{{ related.image_url }}" alt="{{ related.title }}" class="article-img">
+                                    <div class="article-overlay">
+                                        <h3 class="article-title">{{ related.title }}</h3>
+                                        <div class="article-meta">
+                                            <span class="source">{{ related.source }}</span>
+                                            <span class="date">{{ related.published_date.strftime('%B %d') }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="source-date">
+                                    <a href="{{ url_for('article_detail', article_id=related.id) }}" class="btn btn-verge btn-sm">Read Article</a>
+                                    <span class="text-muted">{{ related.published_date.strftime('%H:%M') }} ET</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Article Stats -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Article Information</h2>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h3 class="h6 text-muted mb-2">Source</h3>
+                        <p class="mb-0">{{ article.source }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <h3 class="h6 text-muted mb-2">Published Date</h3>
+                        <p class="mb-0">{{ article.published_date.strftime('%B %d, %Y at %H:%M') }} ET</p>
+                    </div>
+                    <div class="mb-3">
+                        <h3 class="h6 text-muted mb-2">Last Updated</h3>
+                        <p class="mb-0">{{ article.updated_at.strftime('%B %d, %Y at %H:%M') }} ET</p>
+                    </div>
+                    <div>
+                        <h3 class="h6 text-muted mb-2">Keywords</h3>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for keyword in article.keywords %}
+                            <span class="badge keyword-badge">{{ keyword.display_name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Share Options -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Share Article</h2>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <a href="https://twitter.com/intent/tweet?url={{ article.url|urlencode }}&text={{ article.title|urlencode }}" 
+                           target="_blank" 
+                           class="btn btn-outline-light">
+                            <i class="bi bi-twitter-x me-2"></i>Twitter
                         </a>
-                        <a href="{{ url_for('index') }}" class="btn btn-outline-light">
-                            <i class="bi bi-house me-2"></i>Dashboard
+                        <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ article.url|urlencode }}&title={{ article.title|urlencode }}" 
+                           target="_blank" 
+                           class="btn btn-outline-light">
+                            <i class="bi bi-linkedin me-2"></i>LinkedIn
                         </a>
                     </div>
                 </div>
