@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Articles - Social Commerce News{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Page Title -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 style="font-family: var(--verge-headline-font); font-weight: 800; font-size: 2.5rem;">
+                Articles
+            </h1>
+            <div class="d-flex gap-2 mt-3">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-verge dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-download me-2"></i>Export Options
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('export_articles', keyword_id=active_keyword_id, days=active_days) }}">
+                            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Export to CSV
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('export_for_chatgpt', keyword_id=active_keyword_id, days=active_days) }}">
+                            <i class="bi bi-chat-square-text me-2"></i>Export for ChatGPT
+                        </a></li>
+                    </ul>
+                </div>
+                <div class="alert alert-info d-inline-block">
+                    <i class="bi bi-info-circle me-2"></i>Articles are collected automatically
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Filter Articles</h3>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('articles_list') }}" method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="keyword_id" class="form-label">Keyword</label>
+                            <select class="form-select" id="keyword_id" name="keyword_id">
+                                <option value="">All Keywords</option>
+                                {% for keyword in keywords %}
+                                <option value="{{ keyword.id }}" {% if active_keyword_id == keyword.id %}selected{% endif %}>
+                                    {{ keyword.display_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="days" class="form-label">Time Period</label>
+                            <select class="form-select" id="days" name="days">
+                                <option value="1" {% if active_days == 1 %}selected{% endif %}>Last 24 Hours</option>
+                                <option value="3" {% if active_days == 3 %}selected{% endif %}>Last 3 Days</option>
+                                <option value="7" {% if active_days == 7 or not active_days %}selected{% endif %}>Last 7 Days</option>
+                                <option value="14" {% if active_days == 14 %}selected{% endif %}>Last 2 Weeks</option>
+                                <option value="30" {% if active_days == 30 %}selected{% endif %}>Last 30 Days</option>
+                                <option value="90" {% if active_days == 90 %}selected{% endif %}>Last 3 Months</option>
+                                <option value="180" {% if active_days == 180 %}selected{% endif %}>Last 6 Months</option>
+                                <option value="0" {% if active_days == 0 %}selected{% endif %}>All Time</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-verge">Apply Filters</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="section-heading">
+                {% if active_keyword_id %}
+                {% for keyword in keywords %}
+                    {% if keyword.id == active_keyword_id %}
+                        ARTICLES: {{ keyword.display_name|upper }}
+                    {% endif %}
+                {% endfor %}
+                {% elif active_days and active_days == 1 %}
+                ARTICLES: LAST 24 HOURS
+                {% elif active_days and active_days == 3 %}
+                ARTICLES: LAST 3 DAYS
+                {% elif active_days and active_days == 7 %}
+                ARTICLES: LAST 7 DAYS
+                {% elif active_days and active_days == 14 %}
+                ARTICLES: LAST 2 WEEKS
+                {% elif active_days and active_days == 30 %}
+                ARTICLES: LAST 30 DAYS
+                {% elif active_days and active_days == 90 %}
+                ARTICLES: LAST 3 MONTHS
+                {% elif active_days and active_days == 180 %}
+                ARTICLES: LAST 6 MONTHS
+                {% elif active_days == 0 %}
+                ARTICLES: ALL TIME
+                {% else %}
+                ALL ARTICLES
+                {% endif %}
+            </h2>
+        </div>
+    </div>
+    
+    <!-- Articles Grid -->
+    {% if articles %}
+    <div class="row">
+        {% for article in articles %}
+        <div class="col-md-4 mb-4">
+            <div class="article-card">
+                <!-- 1. Publisher color strip -->
+                {% set publisher_class = 'publisher-' + article.source[:3].lower() if article.source else '' %}
+                <div class="publisher-color-strip {% if publisher_class in ['publisher-rtp', 'publisher-pr', 'publisher-bw', 'publisher-cn', 'publisher-et', 'publisher-tch', 'publisher-bb', 'publisher-reu', 'publisher-ft', 'publisher-wsj', 'publisher-vnt', 'publisher-for', 'publisher-adw', 'publisher-mk'] %}{{ publisher_class }}{% else %}publisher-{{ range(1, 15)|random }}{% endif %}"></div>
+                
+                <!-- 2. Category corner flag -->
+                {% set has_tiktok = False %}
+                {% set has_live = False %}
+                {% set has_instagram = False %}
+                {% set has_commerce = False %}
+                {% set has_whatnot = False %}
+                {% set has_youtube = False %}
+                
+                {% for keyword in article.keywords %}
+                    {% if 'tiktok' in keyword.name.lower() %}
+                        {% set has_tiktok = True %}
+                    {% elif 'live' in keyword.name.lower() or 'stream' in keyword.name.lower() %}
+                        {% set has_live = True %}
+                    {% elif 'instagram' in keyword.name.lower() %}
+                        {% set has_instagram = True %}
+                    {% elif 'commerce' in keyword.name.lower() %}
+                        {% set has_commerce = True %}
+                    {% elif 'whatnot' in keyword.name.lower() %}
+                        {% set has_whatnot = True %}
+                    {% elif 'youtube' in keyword.name.lower() %}
+                        {% set has_youtube = True %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% if has_tiktok %}
+                    <div class="category-corner-flag category-tiktok"></div>
+                {% elif has_live %}
+                    <div class="category-corner-flag category-live"></div>
+                {% elif has_instagram %}
+                    <div class="category-corner-flag category-instagram"></div>
+                {% elif has_commerce %}
+                    <div class="category-corner-flag category-commerce"></div>
+                {% elif has_whatnot %}
+                    <div class="category-corner-flag category-whatnot"></div>
+                {% elif has_youtube %}
+                    <div class="category-corner-flag category-youtube"></div>
+                {% endif %}
+                
+                <!-- Content container -->
+                <div class="article-content-container">
+                    <!-- 3. Ghosted monogram backdrop -->
+                    {% set domain = article.url.split('/')[2]|default('news')|replace('.com', '')|replace('.org', '')|replace('.net', '')|replace('www.', '') %}
+                    <div class="article-monogram">{{ domain[0]|upper }}</div>
+                    
+                    <!-- 4. Headline and meta -->
+                    <a href="{{ url_for('article_detail', article_id=article.id) }}" class="text-decoration-none text-white">
+                        <div class="article-title">
+                            <h3>{{ article.title }}</h3>
+                        </div>
+                        <!-- Article Summary -->
+                        {% if article.summary and "Google News" not in article.summary %}
+                        <div class="article-summary mb-3">
+                            {{ article.summary|truncate(160) }}
+                        </div>
+                        {% endif %}
+                    </a>
+                    
+                    <!-- 5. "Why this matters" bar -->
+                    <div class="article-relevance">
+                        {% if article.keywords|length > 0 %}
+                        <a href="{{ url_for('articles_list', keyword_id=article.keywords[0].id, days=active_days) }}" class="text-decoration-none">
+                            <div class="relevance-pill">{{ article.keywords[0].display_name }}</div>
+                        </a>
+                        <div class="sparkline-container">
+                            <svg class="sparkline" viewBox="0 0 32 16" preserveAspectRatio="none">
+                                <polyline points="0,15 5,12 10,14 15,8 20,10 25,4 30,2" 
+                                          fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" />
+                            </svg>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Article metadata -->
+                    <div class="article-meta">
+                        <div class="article-source">{{ article.source }}</div>
+                        <div class="article-date">{{ article.published_date.strftime('%b %d, %Y') if article.published_date else 'Unknown date' }}</div>
+                    </div>
+                </div>
+                
+                <!-- Additional keywords -->
+                <div class="p-3 pt-0">
+                    {% for keyword in article.keywords[1:3] %}
+                    <a href="{{ url_for('articles_list', keyword_id=keyword.id, days=active_days) }}" class="badge keyword-badge text-decoration-none">{{ keyword.display_name }}</a>
+                    {% endfor %}
+                    {% if article.keywords|length > 3 %}
+                    <span class="badge keyword-badge" style="background-color: #666;">+{{ article.keywords|length - 3 }}</span>
+                    {% endif %}
+                
+                    <div class="mt-2">
+                        <a href="{{ article.url }}" target="_blank" class="btn btn-sm btn-outline-light">
+                            <i class="bi bi-link-45deg"></i> Original
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h4 class="alert-heading"><i class="bi bi-info-circle me-2"></i>No articles found</h4>
+                <p>No articles match your current filter criteria. Try different filter options or check back later.</p>
+                <hr>
+                <div class="alert alert-info">
+                    <i class="bi bi-clock-history me-2"></i>Articles are collected automatically on a regular schedule
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-dismissing alerts after 5 seconds
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+
+{% block title %}Trends Analysis - Social Commerce News{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 30px;
+    }
+    .trend-card {
+        margin-bottom: 20px;
+        transition: transform 0.3s;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background-color: #2a2a2a !important; /* Lighter background */
+    }
+    .trend-card:hover {
+        transform: translateY(-5px);
+    }
+    .trend-card h3 a {
+        color: #ffffff !important; /* White text for better contrast */
+        font-weight: 600;
+    }
+    .trend-card-label {
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 500;
+    }
+    .list-group-item {
+        transition: background-color 0.2s;
+    }
+    .list-group-item:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="section-heading">STRATEGIC TRENDS ANALYSIS</h1>
+            <p class="lead">Analyzing social commerce trends from collected news articles</p>
+        </div>
+    </div>
+        
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Filter Trends</h5>
+                    <form action="{{ url_for('trends_analysis') }}" method="GET" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="time_period" class="form-label">Time Period</label>
+                            <select class="form-select" id="time_period" name="time_period">
+                                <option value="7" {% if time_period == 7 %}selected{% endif %}>Last 7 Days</option>
+                                <option value="30" {% if time_period == 30 %}selected{% endif %}>Last 30 Days</option>
+                                <option value="90" {% if time_period == 90 %}selected{% endif %}>Last 90 Days</option>
+                                <option value="180" {% if time_period == 180 %}selected{% endif %}>Last 6 Months</option>
+                                <option value="365" {% if time_period == 365 %}selected{% endif %}>Last Year</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Publication Volume Chart Removed -->
+    
+    <!-- Keyword Distribution and Top Sources Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Article Distribution by Keyword</h2>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="keywordDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Top News Sources</h2>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="sourceDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Publication Day Analysis -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Publication Day Analysis</h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-2">Understanding when articles are published can help time your newsletter for maximum relevance</p>
+                    <div class="chart-container">
+                        <canvas id="weekdayDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Content Length by Source card has been removed -->
+    </div>
+    
+    <!-- Geographic Focus -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Geographic Focus</h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-2">Regions frequently mentioned in article titles</p>
+                    <div class="chart-container">
+                        <canvas id="geoDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Related Topics Analysis</h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-2">Topics that frequently appear together in the same articles</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Topic 1</th>
+                                    <th>Topic 2</th>
+                                    <th>Co-occurrences</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for relation in related_topics %}
+                                <tr>
+                                    <td>{{ relation.keyword1 }}</td>
+                                    <td>{{ relation.keyword2 }}</td>
+                                    <td>{{ relation.count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Weekly Trend Analysis -->
+    {% if weekly_labels %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Weekly Article Volume Trends</h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-2">Track how article volume changes week-to-week to identify emerging trends</p>
+                    <div class="chart-container">
+                        <canvas id="weeklyTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Competitor Analysis section has been removed -->
+    
+    <!-- Trending Keywords -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h4 mb-0">Trending Keywords</h2>
+                    <small class="text-muted">Compared to previous {{ time_period }} days</small>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for trend in trending_keywords %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card trend-card">
+                                <div class="card-body">
+                                    <h3 class="h5 mb-2">
+                                        <a href="#{{ trend.name }}" class="text-decoration-none" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="{{ trend.name }}">
+                                            {{ trend.keyword }} <i class="bi bi-chevron-down"></i>
+                                        </a>
+                                    </h3>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge bg-primary">{{ trend.count }} articles</span>
+                                        <span class="badge {% if trend.change > 50 %}bg-success text-white{% elif trend.change > 0 %}bg-info text-white{% elif trend.change < 0 %}bg-danger text-white{% else %}bg-secondary text-white{% endif %}" style="font-size: 0.85rem; padding: 0.4em 0.6em;">
+                                            {% if trend.change > 0 %}+{% endif %}{{ trend.change }}%
+                                        </span>
+                                    </div>
+                                    <div class="progress mt-2" style="height: 6px; background-color: rgba(255, 255, 255, 0.1);">
+                                        <div class="progress-bar {% if trend.change > 50 %}bg-success{% elif trend.change > 0 %}bg-info{% elif trend.change < 0 %}bg-danger{% else %}bg-secondary{% endif %}" 
+                                             role="progressbar" 
+                                             style="width: {% if trend.change > 100 %}100{% elif trend.change < -100 %}100{% elif trend.change < 0 %}{{ -trend.change }}{% else %}{{ trend.change }}{% endif %}%"></div>
+                                    </div>
+                                    <div class="collapse mt-3" id="{{ trend.name }}">
+                                        <div class="card card-body" style="background-color: #333; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                            <h6 class="text-white">Recent Articles</h6>
+                                            <ul class="list-unstyled">
+                                                {% for article in trend.articles %}
+                                                <li class="mb-1"><a href="{{ url_for('article_detail', article_id=article.id) }}" class="text-decoration-none text-info">{{ article.title }}</a></li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Initialize chart data -->
+<script>
+    // Chart Data
+    const chartData = {
+        
+        keywordDistribution: {
+            labels: {{ keyword_labels|tojson }},
+            datasets: [{
+                label: 'Articles',
+                data: {{ keyword_counts|tojson }},
+                backgroundColor: [
+                    'rgba(210, 45, 45, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(199, 199, 199, 0.7)',
+                    'rgba(83, 102, 255, 0.7)',
+                    'rgba(40, 159, 64, 0.7)',
+                    'rgba(210, 45, 45, 0.5)',
+                ],
+                borderColor: [
+                    'rgba(210, 45, 45, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)',
+                    'rgba(199, 199, 199, 1)',
+                    'rgba(83, 102, 255, 1)',
+                    'rgba(40, 159, 64, 1)',
+                    'rgba(210, 45, 45, 0.8)',
+                ],
+                borderWidth: 1
+            }]
+        },
+        
+        sourceDistribution: {
+            labels: {{ source_labels|tojson }},
+            datasets: [{
+                label: 'Articles',
+                data: {{ source_counts|tojson }},
+                backgroundColor: [
+                    'rgba(210, 45, 45, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                ],
+                borderColor: [
+                    'rgba(210, 45, 45, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)',
+                ],
+                borderWidth: 1
+            }]
+        },
+        
+        weekdayDistribution: {
+            labels: {{ weekday_names|tojson }},
+            datasets: [{
+                label: 'Articles',
+                data: {{ weekday_counts|tojson }},
+                backgroundColor: 'rgba(210, 45, 45, 0.7)',
+                borderColor: 'rgba(210, 45, 45, 1)',
+                borderWidth: 1
+            }]
+        },
+        
+        // Content Length chart has been removed
+        
+        geoDistribution: {
+            labels: {{ geo_labels|tojson }},
+            datasets: [{
+                label: 'Mentions',
+                data: {{ geo_counts|tojson }},
+                backgroundColor: [
+                    'rgba(210, 45, 45, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                ],
+                borderColor: [
+                    'rgba(210, 45, 45, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                ],
+                borderWidth: 1
+            }]
+        },
+        
+        // Competitor volume chart has been removed
+    };
+    
+    {% if weekly_labels %}
+    // Weekly trends data
+    chartData.weeklyTrend = {
+        labels: {{ weekly_labels|tojson }},
+        datasets: [
+            {% if weekly_data %}
+                {% for keyword, data in weekly_data.items() %}
+                {
+                    label: "{{ keyword }}",
+                    data: {{ data|tojson }},
+                    borderColor: getRandomColor(),
+                    backgroundColor: 'rgba(0,0,0,0)',
+                    borderWidth: 2,
+                    tension: 0.3
+                },
+                {% endfor %}
+            {% else %}
+                {
+                    label: "Article Count",
+                    data: {{ weekly_counts|tojson }},
+                    borderColor: "rgba(210, 45, 45, 1)",
+                    backgroundColor: 'rgba(0,0,0,0)',
+                    borderWidth: 2,
+                    tension: 0.3
+                }
+            {% endif %}
+        ]
+    };
+    
+    function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+    {% endif %}
+</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Keyword distribution pie chart
+        const keywordDistributionCtx = document.getElementById('keywordDistributionChart').getContext('2d');
+        new Chart(keywordDistributionCtx, {
+            type: 'pie',
+            data: chartData.keywordDistribution,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+        
+        // Source distribution pie chart
+        const sourceDistributionCtx = document.getElementById('sourceDistributionChart').getContext('2d');
+        new Chart(sourceDistributionCtx, {
+            type: 'pie',
+            data: chartData.sourceDistribution,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+        
+        // Weekday distribution bar chart
+        const weekdayDistributionCtx = document.getElementById('weekdayDistributionChart').getContext('2d');
+        new Chart(weekdayDistributionCtx, {
+            type: 'bar',
+            data: chartData.weekdayDistribution,
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Articles'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Day of Week'
+                        }
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+        
+        // Content length by source chart has been removed
+        
+        // Geographic distribution pie chart
+        const geoDistributionCtx = document.getElementById('geoDistributionChart').getContext('2d');
+        new Chart(geoDistributionCtx, {
+            type: 'pie',
+            data: chartData.geoDistribution,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+        
+        // Competitor volume bar chart has been removed
+        
+        {% if weekly_labels %}
+        // Weekly trend line chart
+        const weeklyTrendCtx = document.getElementById('weeklyTrendChart').getContext('2d');
+        new Chart(weeklyTrendCtx, {
+            type: 'line',
+            data: chartData.weeklyTrend,
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Articles'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Week'
+                        }
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %}

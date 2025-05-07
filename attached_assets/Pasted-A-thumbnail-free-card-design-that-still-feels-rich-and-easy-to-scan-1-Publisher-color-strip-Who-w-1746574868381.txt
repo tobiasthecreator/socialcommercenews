@@ -1,0 +1,38 @@
+A thumbnail‑free card design that still feels rich and easy to scan
+
+1. Publisher color strip
+“Who wrote this?” at a glance
+Across the very top edge of every article card, place a slim (≈ 6‑pixel) horizontal strip.
+	•	Give each publisher its own distinctive colour: e.g., Retail TouchPoints might always be teal, PR Newswire violet, Stock Titan navy, etc.
+	•	The strip becomes an immediate visual cue—no two adjacent cards look the same, and experienced readers soon learn which colour equals which outlet.
+
+2. Category corner flag
+A quick read on what it’s about
+Add a small triangular overlay in the upper‑right corner, coloured by the article’s main tag: orange for “TikTok Shop,” teal for “Live Shopping,” purple for “Social Commerce,” and so on.
+	•	It replaces the splash of colour a missing thumbnail would have provided.
+	•	Readers can scan the grid and spot their favourite topics in seconds.
+
+3. Ghosted monogram backdrop
+Texture without clutter
+Behind the headline, set a giant, ultra‑faint initial—just the first letter of the publisher’s domain—at about 10 % opacity.
+	•	It subtly hints at the source (a big “R” for Retail TouchPoints, “P” for PR Newswire).
+	•	It fills negative space so the card never feels empty, yet it doesn’t fight with the text.
+
+4. Headline and meta
+The content itself
+Keep the headline to two lines max, bold and white.
+Under it, show the date and the publisher name in small caps or light grey so they’re present but not dominant.
+
+5. “Why this matters” bar
+Instant context in place of a photo caption
+Beneath the headline, display one short keyword or phrase that makes the piece relevant (e.g., “Super Brand Day,” “Premier Shop badge”).
+	•	Present it in a pill‑shaped badge.
+	•	Next to it, tuck a tiny spark‑line (a mini line‑chart) showing how often that keyword has appeared in your alerts this week—so readers see at a glance whether it’s surging or steady.
+
+How it all comes together
+	•	Colour strip identifies the outlet.
+	•	Corner flag identifies the topic.
+	•	Ghosted monogram fills visual space.
+	•	Keyword pill + sparkline tells the reader in one glance why the article is worth clicking.
+
+With those four elements, every card gains its own visual identity and functional metadata—no duplicate Google placeholder image needed—while still fitting the sleek, editorial look you want for Sell Sell Sell.

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Topics - Social Commerce Trends</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <style>
+        .topic-card {
+            margin-bottom: 1.5rem;
+        }
+        .alert-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+    </style>
+</head>
+<body>
+    <div class="container my-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1>Manage Google Trends Topics</h1>
+                    <a href="/" class="btn btn-primary">Back to Dashboard</a>
+                </div>
+                <p class="lead">Add, edit, or remove topics to track in Google Trends</p>
+                <div class="alert-container" id="alertContainer">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Add New Topic</h5>
+                        <form action="{{ url_for('add_topic') }}" method="POST">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="name" class="form-label">Topic Name (no spaces)</label>
+                                    <input type="text" class="form-control" id="name" name="name" required placeholder="e.g., tiktok_shop">
+                                    <div class="form-text">Use underscores instead of spaces</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="display_name" class="form-label">Display Name</label>
+                                    <input type="text" class="form-control" id="display_name" name="display_name" required placeholder="e.g., TikTok Shop">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="topic_id" class="form-label">Google Trends Topic ID</label>
+                                    <input type="text" class="form-control" id="topic_id" name="topic_id" required placeholder="e.g., /m/012n97vq">
+                                    <div class="form-text">Find IDs using Google Trends Explorer</div>
+                                </div>
+                                <div class="col-12 text-end">
+                                    <button type="submit" class="btn btn-success">Add Topic</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <h2 class="mb-3">Current Topics</h2>
+                
+                {% if topics|length == 0 %}
+                <div class="alert alert-info">
+                    No topics have been added yet. Add your first topic above.
+                </div>
+                {% endif %}
+                
+                <div class="row">
+                    {% for topic in topics %}
+                    <div class="col-md-6">
+                        <div class="card topic-card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">{{ topic.display_name }}</h5>
+                                <div class="form-check form-switch">
+                                    <form action="{{ url_for('toggle_topic', topic_id=topic.id) }}" method="POST" id="toggle-form-{{ topic.id }}">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="active-{{ topic.id }}" {% if topic.active %}checked{% endif %} onchange="document.getElementById('toggle-form-{{ topic.id }}').submit()">
+                                        <label class="form-check-label" for="active-{{ topic.id }}">{{ 'Active' if topic.active else 'Inactive' }}</label>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <strong>Internal Name:</strong> {{ topic.name }}
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Google Trends ID:</strong> <code>{{ topic.topic_id }}</code>
+                                </div>
+                                <div class="text-muted small">
+                                    Added on {{ topic.created_at.strftime('%Y-%m-%d') }}
+                                </div>
+                            </div>
+                            <div class="card-footer d-flex justify-content-between">
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ topic.id }}">
+                                    Edit
+                                </button>
+                                <form action="{{ url_for('delete_topic', topic_id=topic.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this topic? This action cannot be undone.');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <!-- Edit Modal -->
+                        <div class="modal fade" id="editModal{{ topic.id }}" tabindex="-1" aria-labelledby="editModalLabel{{ topic.id }}" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="editModalLabel{{ topic.id }}">Edit Topic: {{ topic.display_name }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <form action="{{ url_for('edit_topic', topic_id=topic.id) }}" method="POST">
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label for="edit_name{{ topic.id }}" class="form-label">Topic Name (no spaces)</label>
+                                                <input type="text" class="form-control" id="edit_name{{ topic.id }}" name="name" required value="{{ topic.name }}">
+                                                <div class="form-text">Use underscores instead of spaces</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="edit_display_name{{ topic.id }}" class="form-label">Display Name</label>
+                                                <input type="text" class="form-control" id="edit_display_name{{ topic.id }}" name="display_name" required value="{{ topic.display_name }}">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="edit_topic_id{{ topic.id }}" class="form-label">Google Trends Topic ID</label>
+                                                <input type="text" class="form-control" id="edit_topic_id{{ topic.id }}" name="topic_id" required value="{{ topic.topic_id }}">
+                                                <div class="form-text">Find IDs using Google Trends Explorer</div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Finding Google Trends Topic IDs</h5>
+                        <ol>
+                            <li>Go to <a href="https://trends.google.com/trends/" target="_blank" rel="noopener noreferrer">Google Trends</a></li>
+                            <li>Search for your topic of interest</li>
+                            <li>If Google recognizes it as a specific topic, you'll see "Topic" below the search term</li>
+                            <li>Right-click the topic and select "Inspect" or use browser developer tools</li>
+                            <li>Look for an attribute like <code>data-topic-id</code> or similar with a value like <code>/m/012n97vq</code></li>
+                            <li>Alternatively, use console.log in the browser console to find topic IDs in the page's JavaScript</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

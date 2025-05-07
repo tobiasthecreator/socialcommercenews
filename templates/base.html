@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Social Commerce News{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --verge-accent: #d22d2d;
+            --verge-accent-hover: #af2121;
+            --verge-header-bg: rgba(0, 0, 0, 0.95);
+            --verge-dark-bg: #0a0a0a;
+            --verge-card-bg: #1a1a1a;
+            --verge-border-color: rgba(255, 255, 255, 0.08);
+            --verge-nav-height: 64px;
+            --verge-headline-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --card-border-radius: 12px;
+            --card-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        body {
+            background-color: var(--verge-dark-bg);
+            color: #fff;
+            font-family: var(--verge-headline-font);
+            padding-top: var(--verge-nav-height);
+            line-height: 1.6;
+        }
+        
+        .content-wrapper {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        
+        /* Navbar styling */
+        .navbar-verge {
+            background-color: var(--verge-header-bg);
+            height: var(--verge-nav-height);
+            border-bottom: 1px solid var(--verge-border-color);
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 0;
+            z-index: 1030;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .navbar-brand {
+            font-family: var(--verge-headline-font);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            font-size: 1.5rem;
+            color: #fff;
+            padding: 0.5rem 0;
+        }
+        
+        .navbar-verge .nav-link {
+            color: rgba(255,255,255,.7);
+            font-weight: 500;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: var(--transition-base);
+            position: relative;
+        }
+        
+        .navbar-verge .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background-color: var(--verge-accent);
+            transition: var(--transition-base);
+            transform: translateX(-50%);
+        }
+        
+        .navbar-verge .nav-link:hover {
+            color: rgba(255,255,255,1);
+        }
+        
+        .navbar-verge .nav-link:hover::after {
+            width: 100%;
+        }
+        
+        .navbar-verge .nav-link.active {
+            color: var(--verge-accent);
+        }
+        
+        .navbar-verge .nav-link.active::after {
+            width: 100%;
+        }
+        
+        /* Button styling */
+        .btn-verge {
+            background-color: var(--verge-accent);
+            border-color: var(--verge-accent);
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: var(--transition-base);
+        }
+        
+        .btn-verge:hover {
+            background-color: var(--verge-accent-hover);
+            border-color: var(--verge-accent-hover);
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(210, 45, 45, 0.2);
+        }
+        
+        /* Card styling */
+        .card {
+            border-radius: var(--card-border-radius);
+            background-color: var(--verge-card-bg);
+            border: 1px solid var(--verge-border-color);
+            box-shadow: var(--card-box-shadow);
+            margin-bottom: 1.5rem;
+            transition: var(--transition-base);
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px -1px rgba(0, 0, 0, 0.2), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--verge-border-color);
+            font-family: var(--verge-headline-font);
+            font-weight: 700;
+            padding: 1.25rem;
+        }
+        
+        /* Article styling */
+        .article-card {
+            height: 100%;
+            border: none;
+            overflow: hidden;
+            position: relative;
+            box-shadow: var(--card-box-shadow);
+            border-radius: var(--card-border-radius);
+            transition: var(--transition-base);
+            background-color: var(--verge-card-bg);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--verge-border-color);
+        }
+        
+        .article-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+        }
+        
+        .publisher-color-strip {
+            height: 4px;
+            width: 100%;
+            background-color: #3B82F6;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .article-card:hover .publisher-color-strip::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .category-corner-flag {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 32px 32px 0;
+            border-color: transparent var(--verge-accent) transparent transparent;
+            z-index: 2;
+        }
+        
+        .article-content-container {
+            position: relative;
+            padding: 1.75rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .article-monogram {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-8deg);
+            font-size: 12rem;
+            font-weight: 900;
+            opacity: 0.08;
+            color: white;
+            z-index: 0;
+            pointer-events: none;
+            user-select: none;
+            text-shadow: 0 0 25px rgba(255, 255, 255, 0.1);
+            font-family: 'Inter', sans-serif;
+            letter-spacing: -0.05em;
+        }
+        
+        .article-title {
+            position: relative;
+            z-index: 1;
+            font-family: var(--verge-headline-font);
+            font-weight: 700;
+            font-size: 1.35rem;
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+        
+        .article-title h3 {
+            margin-bottom: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid var(--verge-border-color);
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .article-source {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .article-date {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Grid layout improvements */
+        .row {
+            margin-left: -1rem;
+            margin-right: -1rem;
+        }
+        
+        .col, [class*="col-"] {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            :root {
+                --verge-nav-height: 56px;
+            }
+            
+            .navbar-verge .nav-link {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+            }
+            
+            .article-title h3 {
+                font-size: 1.25rem;
+            }
+            
+            .article-content-container {
+                padding: 1.25rem;
+            }
+        }
+        
+        /* Loading states */
+        .loading-skeleton {
+            background: linear-gradient(90deg, 
+                var(--verge-card-bg) 25%, 
+                rgba(255, 255, 255, 0.05) 50%, 
+                var(--verge-card-bg) 75%
+            );
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-verge">
+        <div class="container">
+            <a class="navbar-brand" href="/">SOCIAL COMMERCE NEWS</a>
+            <div class="d-flex">
+                <ul class="navbar-nav d-flex flex-row">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/articles' %}active{% endif %}" href="/articles">Articles</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/trends' %}active{% endif %}" href="/trends">Trends</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/keywords' %}active{% endif %}" href="/keywords">Keywords</a>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <span class="nav-link text-light">
+                            <i class="bi bi-clock-history"></i> Updated: {{ now_et.strftime('%b %d, %H:%M') }} ET
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Alert Container -->
+    <div class="alert-container" id="alertContainer">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <div class="content-wrapper">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="footer-logo">SOCIAL COMMERCE NEWS</div>
+                    <p>Tracking trends and analyzing the social commerce landscape for strategic insights.</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>Quick Links</h5>
+                    <div class="footer-links">
+                        <a href="/">Home</a>
+                        <a href="/articles">Articles</a>
+                        <a href="/trends">Trends</a>
+                        <a href="/keywords">Keywords</a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h5>Last Updated</h5>
+                    <p>{{ now_et.strftime('%B %d, %Y at %H:%M') }} ET</p>
+                    <p>Total articles: {{ article_count if article_count is defined else 'N/A' }}</p>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-12 text-center">
+                    <p class="mb-0">&copy; {{ now.year if now is defined else '2025' }} Social Commerce News. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

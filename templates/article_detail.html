@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }} - Social Commerce News{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .article-header {
+        margin-bottom: 2rem;
+    }
+    
+    .article-title {
+        font-family: var(--verge-headline-font);
+        font-weight: 800;
+        font-size: 2.75rem;
+        line-height: 1.2;
+        margin-bottom: 1rem;
+    }
+    
+    .article-metadata {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        gap: 1rem;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+    }
+    
+    .article-source {
+        font-weight: 600;
+        color: var(--verge-accent);
+    }
+    
+    .article-published {
+        position: relative;
+        padding-left: 1rem;
+    }
+    
+    .article-published:before {
+        content: "•";
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+    
+    .article-image {
+        width: 100%;
+        max-height: 500px;
+        object-fit: cover;
+        margin-bottom: 2rem;
+    }
+    
+    .article-content {
+        font-size: 1.1rem;
+        line-height: 1.7;
+        margin-bottom: 2rem;
+    }
+    
+    .article-content p {
+        margin-bottom: 1.5rem;
+    }
+    
+    .article-sidebar .card {
+        margin-bottom: 1.5rem;
+    }
+    
+    .article-link-card {
+        border-left: 4px solid var(--verge-accent);
+    }
+    
+    .article-keywords-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .related-articles-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .related-article-item {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--verge-border-color);
+    }
+    
+    .related-article-item:last-child {
+        border-bottom: none;
+    }
+    
+    .related-article-link {
+        color: #fff;
+        text-decoration: none;
+        font-weight: 600;
+        display: block;
+    }
+    
+    .related-article-link:hover {
+        color: var(--verge-accent);
+    }
+    
+    .related-article-source {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Article Header -->
+            <div class="article-header">
+                <h1 class="article-title">{{ article.title }}</h1>
+                <div class="article-metadata">
+                    <span class="article-source">{{ article.source }}</span>
+                    <span class="article-published">{{ article.published_date.strftime('%B %d, %Y') if article.published_date else 'Unknown date' }}</span>
+                </div>
+                <div class="article-keywords-container">
+                    {% for keyword in article.keywords %}
+                    <a href="{{ url_for('articles_list', keyword_id=keyword.id, days=7) }}" class="badge keyword-badge text-decoration-none">{{ keyword.display_name }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Article Image Banner with Favicon -->
+            <div class="article-image-container mb-4" style="border-radius: 8px; overflow: hidden; max-height: 400px; position: relative;">
+                {% set domain = article.url.split('/')[2]|default('unknown.com') %}
+                {% if 'news.google.com' in article.url %}
+                    {% set domain = (article.source|lower|replace(' ', '') ~ '.com')|default('news.com') %}
+                {% endif %}
+                
+                <!-- Source Favicon in top-left corner -->
+                <div style="position: absolute; top: 15px; left: 15px; z-index: 10; background-color: white; border-radius: 50%; padding: 3px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                    <img src="https://logo.clearbit.com/{{ domain }}" 
+                         width="32" height="32" 
+                         onerror="this.onerror=null; this.src='/static/images/default-favicon.png'; this.style.visibility='hidden';"
+                         alt="{{ article.source }} logo" 
+                         style="border-radius: 50%;">
+                </div>
+                
+                {% if article.image_url %}
+                <img src="{{ article.image_url }}" alt="{{ article.title }}" class="w-100 h-100 object-fit-cover" style="transition: transform 0.3s ease;">
+                {% else %}
+                <div class="d-flex align-items-center justify-content-center" style="background-color: #3d4b66; height: 300px; padding: 20px;">
+                    <div class="text-center">
+                        <i class="bi bi-newspaper mb-3" style="font-size: 3rem; color: var(--verge-accent);"></i>
+                        <h2 class="text-white" style="max-width: 80%; margin: 0 auto;">{{ article.title }}</h2>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Article Content -->
+            <div class="article-content">
+                {% if article.content %}
+                    {% for paragraph in article.content.split('\n') %}
+                        {% if paragraph %}
+                        <p>{{ paragraph }}</p>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    No content available for this article. Please check the original source.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-lg-4 article-sidebar">
+            <!-- Original Link Card -->
+            <div class="card article-link-card">
+                <div class="card-body">
+                    <h5 class="card-title">Original Article</h5>
+                    <p class="card-text">Visit the original source to read the complete article.</p>
+                    <a href="{{ article.url }}" target="_blank" class="btn btn-verge w-100">
+                        <i class="bi bi-link-45deg me-2"></i>View Original Source
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Related Articles Card -->
+            {% if related_articles %}
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Related Articles</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="related-articles-list">
+                        {% for related in related_articles %}
+                        <li class="related-article-item">
+                            <a href="{{ url_for('article_detail', article_id=related.id) }}" class="related-article-link">
+                                {{ related.title }}
+                            </a>
+                            <div class="related-article-source">
+                                {{ related.source }} - {{ related.published_date.strftime('%b %d, %Y') if related.published_date else 'Unknown date' }}
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Actions Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Actions</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('articles_list') }}" class="btn btn-outline-light">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Articles
+                        </a>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-light">
+                            <i class="bi bi-house me-2"></i>Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
